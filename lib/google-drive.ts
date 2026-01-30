@@ -25,7 +25,7 @@ export async function getImagesFromDrive(folderId: string) {
 
     const response = await drive.files.list({
       q: `'${folderId}' in parents and (mimeType contains 'image/') and trashed = false`,
-      fields: "files(id, name, mimeType, webContentLink, imageMediaMetadata)",
+      fields: "files(id, name, mimeType, webContentLink, imageMediaMetadata, thumbnailLink)",
       pageSize: 100,
     });
 
@@ -34,13 +34,21 @@ export async function getImagesFromDrive(folderId: string) {
     if (!files) return [];
 
     return files.map((file) => {
-       // For public folders, we can use the webContentLink directly or proxy it.
-       // Proxy is still safer to avoid hotlinking issues or auth quirks.
+       // Use Google's thumbnail for grid (fast, pre-optimized by Google)
+       // Use our API proxy for lightbox (full quality)
+       let thumbnailSrc = `/api/image/${file.id}`; // Fallback to full via proxy
+       
+       // Google-provided thumbnailLink is fast and already optimized
+       if (file.thumbnailLink) {
+         // Change the size parameter to get a larger thumbnail for the grid (800px)
+         thumbnailSrc = file.thumbnailLink.replace(/=s\d+/, '=s800');
+       }
+       
        return {
         id: file.id!,
         name: file.name!,
-        // We will continue to use the proxy route which handles the stream nicely
-        src: `/api/image/${file.id}`, 
+        src: thumbnailSrc, // Fast thumbnail for grid
+        srcFull: `/api/image/${file.id}`, // Full image for lightbox
         width: file.imageMediaMetadata?.width || 800,
         height: file.imageMediaMetadata?.height || 1000,
         alt: file.name || "Portfolio Image",

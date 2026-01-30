@@ -92,7 +92,7 @@ export default function Portfolio({ initialImages }: PortfolioProps) {
 
       {/* Controls */}
       <div className="sticky top-4 z-10 flex justify-center mb-8">
-        <div className="bg-white/80 backdrop-blur-md px-6 py-3 rounded-full shadow-sm border border-gray-100 flex items-center gap-4 w-full max-w-md">
+        <div className="bg-white/80 backdrop-blur-md px-6 py-3 rounded-full border border-gray-200 flex items-center gap-4 w-full max-w-md">
           <span className="text-xs text-gray-400 uppercase tracking-widest">Small</span>
           <input
             type="range"
@@ -129,6 +129,8 @@ export default function Portfolio({ initialImages }: PortfolioProps) {
                   )}
                   onLoad={() => setLoadedImages((prev) => new Set(prev).add(image.id))}
                   loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
               </motion.div>
@@ -182,9 +184,11 @@ export default function Portfolio({ initialImages }: PortfolioProps) {
               onClick={(e) => e.stopPropagation()}
             >
               <img
-                src={images[selectedImageIndex].src}
+                src={images[selectedImageIndex].srcFull || images[selectedImageIndex].src}
                 alt={images[selectedImageIndex].alt}
-                className="max-h-[85vh] w-auto max-w-full object-contain shadow-2xl"
+                className="max-h-[85vh] w-auto max-w-full object-contain"
+                loading="eager"
+                fetchPriority="high"
               />
               
               {/* Mobile Nav Overlay (invisible but clickable areas) */}

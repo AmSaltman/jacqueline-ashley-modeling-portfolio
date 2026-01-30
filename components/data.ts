@@ -1,6 +1,7 @@
 export interface PortfolioImage {
   id: string;
   src: string;
+  srcFull?: string; // Optional full-size image for lightbox
   width: number;
   height: number;
   alt: string;
