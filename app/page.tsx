@@ -1,5 +1,6 @@
 import Portfolio from "@/components/Portfolio";
 import { getImagesFromDrive } from "@/lib/google-drive";
+import { clusterIntoShoots } from "@/lib/cluster-shoots";
 import { images as staticImages } from "@/components/data";
 
 export const metadata = {
@@ -7,16 +8,13 @@ export const metadata = {
   description: "Professional modeling portfolio of Jacqueline Ashley",
 };
 
-// Revalidate every hour
 export const revalidate = 3600;
 
 export default async function Home() {
   const FOLDER_ID = "1hRy9BWcSsCFjDDcfNG3-jF3TXH6VQdJQ";
   let portfolioImages = staticImages;
 
-  // Use API Key if available, otherwise fall back to static images
-  // For public folders, we can use the API key method without Service Account
-  if (process.env.GOOGLE_API_KEY) {
+  if (process.env.GOOGLE_API_KEY || (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY)) {
     try {
       const driveImages = await getImagesFromDrive(FOLDER_ID);
       if (driveImages.length > 0) {
@@ -27,9 +25,11 @@ export default async function Home() {
     }
   }
 
+  const shoots = clusterIntoShoots(portfolioImages);
+
   return (
     <main>
-      <Portfolio initialImages={portfolioImages} />
+      <Portfolio initialShoots={shoots} />
     </main>
   );
 }

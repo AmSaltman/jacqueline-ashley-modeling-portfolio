@@ -25,8 +25,8 @@ export async function getImagesFromDrive(folderId: string) {
 
     const response = await drive.files.list({
       q: `'${folderId}' in parents and (mimeType contains 'image/') and trashed = false`,
-      fields: "files(id, name, mimeType, webContentLink, imageMediaMetadata, thumbnailLink)",
-      pageSize: 100,
+      fields: "files(id, name, mimeType, webContentLink, imageMediaMetadata, thumbnailLink, createdTime)",
+      pageSize: 1000,
     });
 
     const files = response.data.files;
@@ -34,24 +34,17 @@ export async function getImagesFromDrive(folderId: string) {
     if (!files) return [];
 
     return files.map((file) => {
-       // Use Google's thumbnail for grid (fast, pre-optimized by Google)
-       // Use our API proxy for lightbox (full quality)
-       let thumbnailSrc = `/api/image/${file.id}`; // Fallback to full via proxy
-       
-       // Google-provided thumbnailLink is fast and already optimized
-       if (file.thumbnailLink) {
-         // Change the size parameter to get a larger thumbnail for the grid (800px)
-         thumbnailSrc = file.thumbnailLink.replace(/=s\d+/, '=s800');
-       }
+       const createdTime = file.imageMediaMetadata?.time || file.createdTime || undefined;
        
        return {
         id: file.id!,
         name: file.name!,
-        src: thumbnailSrc, // Fast thumbnail for grid
-        srcFull: `/api/image/${file.id}`, // Full image for lightbox
+        src: `/api/image/${file.id}?w=600&q=70`,
+        srcFull: `/api/image/${file.id}`,
         width: file.imageMediaMetadata?.width || 800,
         height: file.imageMediaMetadata?.height || 1000,
         alt: file.name || "Portfolio Image",
+        createdTime,
       };
     });
   } catch (error) {

@@ -1,10 +1,24 @@
 export interface PortfolioImage {
   id: string;
   src: string;
-  srcFull?: string; // Optional full-size image for lightbox
+  srcFull?: string;
   width: number;
   height: number;
   alt: string;
+  createdTime?: string; // ISO string or EXIF "YYYY:MM:DD HH:MM:SS" format
+}
+
+export interface PhotographerCredit {
+  name: string;
+  url?: string;
+}
+
+export interface PhotoShoot {
+  id: string;
+  date: string;
+  dateLabel: string;
+  photographers: PhotographerCredit[];
+  images: PortfolioImage[];
 }
 
 // Using placeholder images from Unsplash

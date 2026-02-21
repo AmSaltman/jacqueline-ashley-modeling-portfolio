@@ -1,62 +1,82 @@
 import { google } from "googleapis";
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
+
+function getDriveClient() {
+  if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      },
+      scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+    });
+    return google.drive({ version: "v3", auth });
+  }
+  if (process.env.GOOGLE_API_KEY) {
+    return google.drive({ version: "v3", auth: process.env.GOOGLE_API_KEY });
+  }
+  return null;
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  
-  if (!id) {
-    return new NextResponse("Missing file ID", { status: 400 });
-  }
+  if (!id) return new NextResponse("Missing file ID", { status: 400 });
+
+  const drive = getDriveClient();
+  if (!drive) return new NextResponse("Missing credentials", { status: 500 });
 
   try {
-    let drive;
-    // Use Service Account if available
-    if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) {
-       const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: process.env.GOOGLE_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-        },
-        scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-      });
-      drive = google.drive({ version: "v3", auth });
-    } 
-    // Fallback to API Key
-    else if (process.env.GOOGLE_API_KEY) {
-       drive = google.drive({ version: "v3", auth: process.env.GOOGLE_API_KEY });
-    } else {
-       // If no credentials, we can't proxy the image from Google Drive.
-       // However, since the folder is public, we might not strictly need proxying if we had the direct link.
-       // But the 'webContentLink' from 'list' usually forces a download or auth check.
-       // To fetch the binary data via API (which this route does), we need an API key at minimum.
-       return new NextResponse("Missing credentials", { status: 500 });
+    const url = new URL(request.url);
+    const targetWidth = url.searchParams.get("w");
+    const quality = parseInt(url.searchParams.get("q") || "80", 10);
+
+    if (targetWidth) {
+      // Compressed thumbnail: fetch as buffer, resize with sharp, return JPEG
+      const response = await drive.files.get(
+        { fileId: id, alt: "media" },
+        { responseType: "arraybuffer" }
+      );
+      const source = Buffer.from(response.data as ArrayBuffer);
+
+      try {
+        const resized = await sharp(source)
+          .resize({ width: parseInt(targetWidth, 10), withoutEnlargement: true })
+          .jpeg({ quality, mozjpeg: true })
+          .toBuffer();
+
+        return new Response(new Uint8Array(resized), {
+          headers: {
+            "Content-Type": "image/jpeg",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        });
+      } catch {
+        return new Response(new Uint8Array(source), {
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        });
+      }
     }
 
-    // Get file metadata to set correct content type
-    const fileMetadata = await drive.files.get({
-      fileId: id,
-      fields: "mimeType, name",
-    });
-
-    // Get file content as stream
+    // Full-resolution: stream original file
+    const meta = await drive.files.get({ fileId: id, fields: "mimeType" });
     const response = await drive.files.get(
       { fileId: id, alt: "media" },
       { responseType: "stream" }
     );
 
-    // Create a new headers object (HeadersInit type)
     const headers = new Headers();
-    headers.set("Content-Type", fileMetadata.data.mimeType || "application/octet-stream");
+    headers.set("Content-Type", meta.data.mimeType || "application/octet-stream");
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
 
-    // Return the stream
-    // @ts-ignore - The types for Google Drive stream and Next.js response body are slightly mismatched but compatible
-    return new NextResponse(response.data, {
-      headers,
-    });
+    // @ts-expect-error — Google stream is compatible with Response body
+    return new NextResponse(response.data, { headers });
   } catch (error) {
     console.error("Error serving image:", error);
     return new NextResponse("Error fetching image", { status: 500 });

@@ -3,22 +3,97 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-playfair);
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #111111;
+  --muted: #888888;
+  --border: #e8e8e8;
+  --surface: #f2f2f2;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #ffffff; /* Force white background as requested */
-    --foreground: #171717;
+    --background: #fafafa;
+    --foreground: #111111;
+    --muted: #888888;
+    --border: #e8e8e8;
+    --surface: #f2f2f2;
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Horizontal photo strips ──────────────────────────────────── */
+
+.photo-strip {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.photo-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-fade {
+  mask-image: linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
+}
+.scroll-fade-right {
+  mask-image: linear-gradient(to right, black 0%, black 97%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, black 97%, transparent 100%);
+}
+.scroll-fade-left {
+  mask-image: linear-gradient(to right, transparent 0%, black 3%, black 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 3%, black 100%);
+}
+.scroll-fade-none {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* ─── Lightbox glow loader ─────────────────────────────────────── */
+
+@keyframes glow-breathe {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.lightbox-glow {
+  animation: glow-breathe 2.4s ease-in-out infinite;
+}
+
+.lightbox-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer-sweep 1.8s ease-in-out infinite;
 }
