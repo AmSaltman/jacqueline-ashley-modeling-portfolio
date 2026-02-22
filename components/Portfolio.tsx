@@ -28,8 +28,8 @@ const ROW_HEIGHT_DESKTOP = 380;
 const ROW_HEIGHT_MOBILE = 260;
 
 const CONTACT = {
-  phone: "+1 (555) 123-4567",
-  email: "jacqueline@example.com",
+  phone: "(413) 563-6935",
+  email: "Jacquelineeashley@gmail.com",
 };
 
 // ─── Main Component ─────────────────────────────────────────────
